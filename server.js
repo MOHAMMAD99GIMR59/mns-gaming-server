@@ -3,13 +3,23 @@ const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// دریافت JSON
 app.use(express.json());
 
-// ذخیره موقت کدهای تأیید
+// اجازه اتصال سایت به API
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
 const verificationCodes = new Map();
 
-// صفحه اصلی سرور
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -17,7 +27,6 @@ app.get("/", (req, res) => {
   });
 });
 
-// تست API
 app.get("/api/test", (req, res) => {
   res.json({
     success: true,
@@ -25,7 +34,6 @@ app.get("/api/test", (req, res) => {
   });
 });
 
-// ارسال/ساخت کد تأیید
 app.post("/api/send-code", (req, res) => {
   const { email, phone } = req.body;
 
@@ -36,11 +44,12 @@ app.post("/api/send-code", (req, res) => {
     });
   }
 
-  // ساخت کد ۶ رقمی
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
 
-  // کد بعد از 5 دقیقه منقضی می‌شود
-  const expiresAt = Date.now() + 5 * 60 * 1000;
+  const expiresAt =
+    Date.now() + 5 * 60 * 1000;
 
   const key = email || phone;
 
@@ -50,7 +59,6 @@ app.post("/api/send-code", (req, res) => {
     verified: false
   });
 
-  // فعلاً برای تست در لاگ سرور نمایش داده می‌شود
   console.log("================================");
   console.log("MNS Gaming Verification Code");
   console.log("User:", key);
@@ -65,7 +73,6 @@ app.post("/api/send-code", (req, res) => {
   });
 });
 
-// بررسی کد تأیید
 app.post("/api/verify-code", (req, res) => {
   const { email, phone, code } = req.body;
 
@@ -77,7 +84,9 @@ app.post("/api/verify-code", (req, res) => {
   }
 
   const key = email || phone;
-  const savedData = verificationCodes.get(key);
+
+  const savedData =
+    verificationCodes.get(key);
 
   if (!savedData) {
     return res.status(404).json({
@@ -86,7 +95,6 @@ app.post("/api/verify-code", (req, res) => {
     });
   }
 
-  // بررسی زمان انقضا
   if (Date.now() > savedData.expiresAt) {
     verificationCodes.delete(key);
 
@@ -96,7 +104,6 @@ app.post("/api/verify-code", (req, res) => {
     });
   }
 
-  // بررسی کد
   if (String(code) !== savedData.code) {
     return res.status(400).json({
       success: false,
@@ -112,12 +119,13 @@ app.post("/api/verify-code", (req, res) => {
   });
 });
 
-// بررسی وضعیت تأیید
 app.post("/api/check-verification", (req, res) => {
   const { email, phone } = req.body;
 
   const key = email || phone;
-  const savedData = verificationCodes.get(key);
+
+  const savedData =
+    verificationCodes.get(key);
 
   if (!savedData) {
     return res.json({
@@ -132,7 +140,6 @@ app.post("/api/check-verification", (req, res) => {
   });
 });
 
-// اجرای سرور
 app.listen(PORT, "0.0.0.0", () => {
   console.log("================================");
   console.log("MNS Gaming Server");
